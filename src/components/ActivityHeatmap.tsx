@@ -1,9 +1,9 @@
 'use client';
 
 import { useMemo, useEffect } from 'react';
-import { format, parseISO, eachDayOfInterval, subDays, getDay, startOfWeek, getMonth } from 'date-fns';
+import { format, eachDayOfInterval, subDays, getDay, getMonth } from 'date-fns';
 
-interface Task {
+export interface Task {
   status?: string;
   taskStatus?: string | number;
   modified: string;
