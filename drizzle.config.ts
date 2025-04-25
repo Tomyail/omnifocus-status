@@ -10,7 +10,7 @@ export default defineConfig({
   out: './drizzle',
   dialect: 'postgresql', // Use dialect instead of driver
   dbCredentials: {
-    url: process.env.POSTGRES_URL!, // Use url instead of connectionString
+    url: process.env.DATABASE_URL!, // Use url instead of connectionString
   },
   verbose: true,
   strict: true,
