@@ -4,6 +4,11 @@ import { tasks as tasksSchema } from '@/db/schema'; // Import the tasks schema
 import { eq, sql } from 'drizzle-orm'; // Import sql helper
 import * as z from 'zod'; // Import zod
 
+// Helper function to get the expected API key from environment variables
+function getApiKey(): string | undefined {
+  return process.env.IMPORT_API_SECRET_KEY;
+}
+
 // Define the expected structure of a single task using Zod
 const TaskSchema = z.object({
     primaryKey: z.string(),
@@ -29,6 +34,33 @@ const RequestBodySchema = z.object({
 });
 
 export async function POST(req: NextRequest) {
+    const apiKey = getApiKey();
+
+    // --- Authorization Check --- 
+    if (!apiKey) {
+        console.error('API Key is not configured in environment variables.');
+        // Don't expose this error detail to the client
+        return new NextResponse('Server configuration error.', { status: 500 }); 
+    }
+
+    const authHeader = req.headers.get('Authorization');
+    const expectedAuthValue = `Bearer ${apiKey}`;
+
+    if (!authHeader || authHeader !== expectedAuthValue) {
+        console.warn('Unauthorized API access attempt.', authHeader, expectedAuthValue);
+        // Return a more helpful JSON response
+        return NextResponse.json(
+            {
+              error: 'Unauthorized',
+              message: 'Missing or invalid Authorization header. Please include the header as \'Authorization: Bearer YOUR_API_SECRET_KEY\'.'
+            },
+            { status: 401 }
+          );
+    }
+    // --- End Authorization Check ---
+
+    console.log('Authorization successful. Processing import...');
+
     try {
         const body = await req.json();
         console.log('Received request body:', JSON.stringify(body, null, 2));
@@ -98,6 +130,6 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: 'Invalid data format', details: error.errors }, { status: 400 });
         }
 
-        return NextResponse.json({ error: 'Internal Server Error', details: error.message }, { status: 500 });
+        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
     }
 }
