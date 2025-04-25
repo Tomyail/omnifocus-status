@@ -1,131 +1,88 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# OmniFocus Status Dashboard
 
-## Getting Started
+## Functionality
 
-First, run the development server:
+This project syncs completed OmniFocus task data to a web service, allowing you to visualize and track your task activity history over time. It consists of two main parts:
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+1.  **OmniFocus Script (`.omnijs`):** An Automation script that runs within OmniFocus to collect recently completed tasks and send them to a specified API endpoint.
+2.  **Web Service (Next.js App):** A web application built with Next.js that receives the task data via an API endpoint, stores it (e.g., in a database), and displays it on a dashboard.
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+![Screenshot](image.png)
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## How to Use
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### 1. Setup Web Service
 
-## Environment Variables
+This is a [Next.js](https://nextjs.org) project.
 
-This project requires certain environment variables to be set. Create a `.env.local` file in the project root and add the following:
+**Prerequisites:**
+*   Node.js and npm/yarn/pnpm/bun installed.
+*   A PostgreSQL database (e.g., from Neon, Supabase, Vercel Postgres).
 
-```
-# Connection string for your PostgreSQL database (e.g., from Neon, Supabase, etc.)
-DATABASE_URL=postgres://user:password@host:port/database?sslmode=require
-
-# A secret key to protect the data import API endpoint
-IMPORT_API_SECRET_KEY=your_strong_random_secret_key
-```
-
-Replace the placeholder values with your actual database connection string and a secure, randomly generated secret key.
-
-When deploying to platforms like Vercel, ensure these environment variables are also configured in the project settings.
-
-## Setup and Usage
-
-Follow these steps to set up the project and visualize your OmniFocus task activity:
-
-1.  **Clone the Repository:**
+**Installation & Setup:**
+1.  Clone the repository:
     ```bash
-    git clone <repository_url>
+    git clone <your-repo-url>
     cd omnifocus-status
+    ```
+2.  Install dependencies:
+    ```bash
     npm install
+    # or yarn install / pnpm install / bun install
     ```
+3.  Create a `.env.local` file in the project root and add your database connection string:
+    ```env
+    # Connection string for your PostgreSQL database
+    DATABASE_URL="postgres://user:password@host:port/database?sslmode=require"
 
-2.  **Set Environment Variables:**
-    *   Create a `.env.local` file in the project root.
-    *   Add your PostgreSQL `DATABASE_URL`.
-    *   Add a secure `IMPORT_API_SECRET_KEY`.
+    # Optional: Define a secret token for API authorization
+    API_SECRET_TOKEN="your_secure_random_token"
     ```
-    DATABASE_URL=postgres://user:password@host:port/database?sslmode=require
-    IMPORT_API_SECRET_KEY=your_strong_random_secret_key
+4.  Run database migrations (if using Prisma or similar):
+    ```bash
+    npx prisma migrate dev # Or the relevant command for your setup
     ```
-    *   *(Optional but recommended)* Run database migrations if you haven't already:
-        ```bash
-        npx drizzle-kit generate:pg
-        npm run migrate # Or the command defined in your package.json
-        ```
+5.  Start the development server:
+    ```bash
+    npm run dev
+    ```
+    Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-3.  **Deploy to Vercel:**
-    *   Push your code to a Git repository (GitHub, GitLab, Bitbucket).
-    *   Import the project into Vercel.
-    *   During import or in the Vercel project settings, configure the **same** `DATABASE_URL` and `IMPORT_API_SECRET_KEY` environment variables you used locally.
-    *   Let Vercel build and deploy the application. Note your deployment URL (e.g., `https://your-app-name.vercel.app`).
+### 2. Configure & Install OmniFocus Script
 
-4.  **Configure the OmniFocus Script:**
-    *   Open the OmniFocus script file: `support/task-activity-stats.omnijs`.
-    *   Locate the configuration section at the top:
-        ```javascript
-        // Configuration: API Endpoint URL
-        const API_ENDPOINT = 'https://your-app-name.vercel.app/api/import'; // <-- REPLACE with your Vercel URL
-        // Configuration: Export tasks added within how many days
-        const EXPORT_DAYS_AGO = 365; // Or your desired range
-        // Configuration: API Authentication Token (replace with your own)
-        const API_TOKEN = 'your_strong_random_secret_key'; // <-- REPLACE with your IMPORT_API_SECRET_KEY
-        ```
-    *   Replace the placeholder `API_ENDPOINT` with your actual Vercel deployment URL.
-    *   Replace the placeholder `API_TOKEN` with the exact value you set for `IMPORT_API_SECRET_KEY`.
+1.  **Get the Script:** Find the `support/task-activity-stats.omnijs` file in the project.
+2.  **Configure the Script:** Open the `.omnijs` file and modify the configuration variables at the top:
+    ```javascript
+    // Configuration: API Endpoint URL (Point this to your Web Service API)
+    const API_ENDPOINT = 'http://localhost:3000/api/import'; // Or your deployed URL
+    // Configuration: Export tasks added within how many days
+    const EXPORT_DAYS_AGO = 7; // Adjust as needed
+    // Configuration: API Authentication Token (Must match API_SECRET_TOKEN in .env.local)
+    const API_TOKEN = 'your_secure_random_token'; // Use the same token as in .env.local
+    ```
+3.  **Install the Script:**
+    *   Open OmniFocus.
+    *   Select "Automation" -> "Configure..." from the menu bar.
+    *   Click the "+" button and choose "Add Plug-In from File..." or drag the configured `.omnijs` file into the Plug-Ins window.
+    *   Alternatively, save the configured script directly into your OmniFocus Plug-Ins folder. You can find this folder via Automation -> Configure... -> Reveal Plug-Ins Folder.
+4.  **Run the Script:**
+    *   You can run the script manually from the Automation menu in OmniFocus.
+    *   Consider setting up a keyboard shortcut or adding it to your OmniFocus toolbar for quick access.
 
-5.  **Install the OmniFocus Script:**
-    *   In OmniFocus, go to `Help` -> `Open Scripts Folder`.
-    *   Copy the modified `task-activity-stats.omnijs` file into this folder.
-    *   You may need to restart OmniFocus or reload the scripts for it to appear in the Automation menu.
+### 3. Deploy to Vercel (Optional)
 
-6.  **Run the OmniFocus Script:**
-    *   In OmniFocus, select `Automation` -> `Export Task Activity` (or the label you defined in the script).
-    *   The script will gather recent tasks and send them to your deployed API endpoint.
-    *   Check the OmniFocus Console (`Window` -> `Console`) for logs and potential errors.
+*   Push your code to a Git repository (GitHub, GitLab, Bitbucket).
+*   Import the project into Vercel.
+*   During import or in the Vercel project settings, configure the **same** `DATABASE_URL` and `API_SECRET_TOKEN` environment variables you used locally.
+*   Let Vercel build and deploy the application. Note your deployment URL (e.g., `https://your-app-name.vercel.app`).
 
-7.  **View the Dashboard:**
-    *   Open your Vercel deployment URL (e.g., `https://your-app-name.vercel.app`) in your browser.
-    *   The heatmap and stats should reflect the data imported via the script.
+### 4. View Status
 
-## Importing Data
+Once the script runs successfully and sends data to your web service, visit the web application URL (e.g., `http://localhost:3000`) to see your task activity dashboard.
 
-The application includes an API endpoint to import task data, typically from OmniFocus.
+---
 
-- **Endpoint:** `POST /api/import`
-- **Authentication:** Requires an `Authorization` header with a Bearer token matching the `IMPORT_API_SECRET_KEY` environment variable.
-  ```
-  Authorization: Bearer your_strong_random_secret_key
-  ```
-- **Body:** Expects a JSON payload with a `tasks` array. Each task object in the array should conform to the expected structure (see `src/app/api/import/route.ts` for the Zod schema).
-
-**Example using `curl`:**
-
-```bash
-curl -X POST \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer your_strong_random_secret_key" \
-  -d '{
-        "tasks": [
-          {
-            "primaryKey": "task123",
-            "name": "Example Task",
-            "status": "completed",
-            "modified": "2025-04-25T10:00:00.000Z",
-            "completionDate": "2025-04-25T10:00:00.000Z"
-            # ... other relevant task fields
-          }
-        ]
-      }' \
-  http://localhost:3000/api/import # Or your deployed URL
-```
+*This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font).*
 
 ## Learn More
 
