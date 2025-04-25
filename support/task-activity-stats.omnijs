@@ -1,0 +1,167 @@
+/*{
+  "type": "action",
+  "label": "Export",
+  "image": "text.bubble"
+}*/
+(() => {
+    // Configuration: API Endpoint URL
+    // const API_ENDPOINT = 'https://YOUR_DOMAIN/api/import';
+    // Configuration: Export tasks added within how many days
+    const EXPORT_DAYS_AGO = 7;
+    // Configuration: API Authentication Token (replace with your own)
+    const API_TOKEN = 'YOUR_API_TOKEN_HERE'; 
+
+    const action = new PlugIn.Action(async function (selection, sender) {
+      const rootFolders = flattenedFolders.filter(
+        (folder) => folder.parent === null
+      );
+  
+      const folderStatus = {
+        active: Folder.Status.Active,
+        dropped: Folder.Status.Dropped,
+      };
+      const tagStatus = {
+        active: Tag.Status.Active,
+        dropped: Tag.Status.Dropped,
+        onHold: Tag.Status.OnHold,
+      };
+  
+      const projectStatus = {
+        active: Project.Status.Active,
+        dropped: Project.Status.Dropped,
+        onHold: Project.Status.OnHold,
+        done: Project.Status.Done,
+      };
+  
+      const taskStatus = {
+        available: Task.Status.Available,
+        blocked: Task.Status.Blocked,
+        completed: Task.Status.Completed,
+        dropped: Task.Status.Dropped,
+        dueSoon: Task.Status.DueSoon,
+        next: Task.Status.Next,
+        overdue: Task.Status.Overdue,
+      };
+      const getStatus = (data, statusMap, propKey = 'status') => {
+        const target = Object.entries(statusMap).find(([key, value]) => {
+          if (data[propKey] === value) {
+            return true;
+          }
+          return false;
+        });
+        if (!target) {
+          console.log('status not found', data.status, statusMap);
+        }
+        return target[0];
+      };
+  
+      const applyDatabaseObject = (data, result) => {
+        result.primaryKey = data.id.primaryKey;
+      };
+      const applyDatedObject = (data, result) => {
+        result.added = data.added;
+        result.modified = data.modified;
+        applyDatabaseObject(data, result);
+      };
+      const applyActiveObject = (data, result) => {
+        result.active = data.active;
+        result.effectiveActive = data.effectiveActive;
+        applyDatedObject(data, result);
+      };
+  
+      const createFolder = (folder) => {
+        const result = {};
+        applyActiveObject(folder, result);
+  
+        result.type = 'folder';
+        result.name = folder.name;
+        result.status = getStatus(folder, folderStatus);
+        result.children = folder.folders.map(createFolder);
+  
+        result.projects = folder.projects.map(createProject);
+        return result;
+      };
+  
+  
+      const createProject = (project) => {
+        const result = {};
+        applyActiveObject(project, result);
+  
+        result.type = 'project';
+        result.name = project.name;
+        result.status = getStatus(project, projectStatus);
+  
+        result.task = createTask(project.task);
+        return result;
+      };
+  
+      const createTask = (task) => {
+        const result = {};
+        applyActiveObject(task, result);
+  
+        result.type = 'task';
+        result.name = task.name;
+        result.status = getStatus(task, taskStatus, 'taskStatus');
+  
+        // result.tasks = task.tasks.map(createTask);
+        return result;
+      };
+  
+      const sendPost = async (url, body) => {
+        const request = URL.FetchRequest.fromString(url);
+        request.method = 'POST';
+        request.headers = {
+          'content-type': 'application/json',
+          'Authorization': `Bearer ${API_TOKEN}`,
+        };
+
+
+        request.bodyString = JSON.stringify(body);
+        const response = await request.fetch();
+  
+        const responseCode = response.statusCode;
+        if (responseCode >= 200 && responseCode < 300) {
+          const responseJSON = JSON.parse(response.bodyString);
+          return responseJSON;
+        } else {
+          console.error('Error:', response.bodyString);
+          throw {
+            name: responseCode,
+            message: 'There was an issue retrieving the message.',
+          };
+        }
+      };
+  
+  
+      const exportRootFolders = rootFolders.map(createFolder);
+  
+      const rootProjects = flattenedProjects.filter(
+        (project) => project.parentFolder === null
+      );
+  
+      const exportRootProjects = rootProjects.map(createProject);
+      const exportInbox = inbox.map(createTask);
+
+      const startDate = new Date();
+      startDate.setDate(startDate.getDate() - EXPORT_DAYS_AGO);
+      
+      const tasks = flattenedTasks
+        .filter(task => task.added >= startDate)
+        .filter(task => task.taskStatus === Task.Status.Completed)
+        .map(createTask)
+        .sort((a, b) => b.modified - a.modified);
+  
+
+      await sendPost(API_ENDPOINT, {
+        tasks
+      });
+
+      await document.sync();
+    });
+  
+    action.validate = function (selection, sender) {
+      return Pasteboard.general.hasStrings;
+    };
+  
+    return action;
+  })();
