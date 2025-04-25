@@ -4,6 +4,8 @@ import { tasks as tasksSchema } from '@/db/schema'; // Import the tasks schema
 import { desc } from 'drizzle-orm'; // Import desc for ordering
 import { format } from 'date-fns';
 
+export const dynamic = 'force-dynamic'; // Force dynamic rendering
+
 // Define the structure of the data returned from the database
 // We'll use the rawData field which stores the original task JSON
 interface DbTask {
