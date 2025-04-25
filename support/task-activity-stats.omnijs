@@ -160,7 +160,7 @@
     });
   
     action.validate = function (selection, sender) {
-      return Pasteboard.general.hasStrings;
+      return true;
     };
   
     return action;
