@@ -6,7 +6,8 @@ import { format, eachDayOfInterval, subDays, getDay, getMonth } from 'date-fns';
 export interface Task {
   status?: string;
   taskStatus?: string | number;
-  modified: string;
+  modified?: string; // Keep if needed elsewhere, otherwise remove
+  completionDate?: string | null; // Add completion date
   name: string;
   primaryKey: string;
   [key: string]: any; // Allow for additional properties
@@ -42,8 +43,8 @@ export default function ActivityHeatmap({ tasks = [] }: ActivityHeatmapProps) {
       const taskStatusValues = new Set();
       
       validTasks.forEach(task => {
-        if (task.status) statusValues.add(task.status);
-        if (task.taskStatus) taskStatusValues.add(task.taskStatus);
+        if (task.status !== undefined) statusValues.add(task.status);
+        if (task.taskStatus !== undefined) taskStatusValues.add(task.taskStatus);
       });
       
       console.log('Status values found:', Array.from(statusValues));
@@ -55,14 +56,15 @@ export default function ActivityHeatmap({ tasks = [] }: ActivityHeatmapProps) {
       );
       console.log('Completed tasks (case insensitive):', completedTasks.length);
       
-      // Check modified dates
-      const modifiedDates = validTasks
-        .filter(task => task.modified)
-        .map(task => new Date(task.modified));
+      // Check completion dates
+      const completionDates = validTasks
+        .filter(task => task.completionDate)
+        .map(task => task.completionDate ? new Date(task.completionDate) : null)
+        .filter(date => date !== null) as Date[]; // Filter out nulls and assert type
       
-      if (modifiedDates.length > 0) {
-        console.log('Sample modified dates:', 
-          modifiedDates.slice(0, 3).map(d => d.toISOString())
+      if (completionDates.length > 0) {
+        console.log('Sample completion dates:', 
+          completionDates.slice(0, 3).map(d => d.toISOString())
         );
       }
     }
@@ -84,14 +86,15 @@ export default function ActivityHeatmap({ tasks = [] }: ActivityHeatmapProps) {
     validTasks.forEach(task => {
       // Check for completed status - case insensitive comparison and handle different formats
       const status = task.status || task.taskStatus;
-      if (status && typeof status === 'string' && status.toLowerCase() === 'completed' && task.modified) {
+      // Use completionDate for aggregation
+      if (status && typeof status === 'string' && status.toLowerCase() === 'completed' && task.completionDate) {
         try {
           // Parse the date, handling potential invalid dates
-          const modifiedDate = new Date(task.modified);
+          const completionDateValue = new Date(task.completionDate);
           
           // Check if date is valid
-          if (!isNaN(modifiedDate.getTime())) {
-            const dateStr = format(modifiedDate, 'yyyy-MM-dd');
+          if (!isNaN(completionDateValue.getTime())) {
+            const dateStr = format(completionDateValue, 'yyyy-MM-dd');
             
             if (taskMap[dateStr] !== undefined) {
               taskMap[dateStr]++;
