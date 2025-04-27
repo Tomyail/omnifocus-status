@@ -207,7 +207,7 @@ export default function ActivityHeatmap({ tasks = [] }: ActivityHeatmapProps) {
               {week.map((day, dayIndex) => (
                 <div 
                   key={`day-${weekIndex}-${dayIndex}`}
-                  className={`w-3 h-3 m-0.5 rounded-sm relative group ${day ? getLevelColor(day.level) : 'opacity-0'}`}
+                  className={`w-3 h-3 m-0.5 rounded-sm relative group border border-gray-200 dark:border-gray-600 ${day ? getLevelColor(day.level) : 'bg-gray-100 dark:bg-gray-700 opacity-50'}`}
                   title={day ? `${format(day.date, 'yyyy-MM-dd')}: ${day.count} tasks` : ''}
                 >
                   {day && day.count > 0 && (
@@ -241,12 +241,12 @@ export default function ActivityHeatmap({ tasks = [] }: ActivityHeatmapProps) {
 
 function getLevelColor(level: number): string {
   switch (level) {
-    case 0: return 'bg-gray-100 dark:bg-gray-800';
+    case 0: return 'bg-gray-100 dark:bg-gray-700';
     case 1: return 'bg-green-100 dark:bg-green-900';
     case 2: return 'bg-green-300 dark:bg-green-700';
     case 3: return 'bg-green-500 dark:bg-green-500';
     case 4: return 'bg-green-700 dark:bg-green-300';
-    default: return 'bg-gray-100 dark:bg-gray-800';
+    default: return 'bg-gray-100 dark:bg-gray-700';
   }
 }
 
