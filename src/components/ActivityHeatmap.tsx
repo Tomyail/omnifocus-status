@@ -174,8 +174,8 @@ export default function ActivityHeatmap({ tasks = [] }: ActivityHeatmapProps) {
         <div className="flex flex-col mr-2 text-xs text-gray-500 dark:text-gray-400 shrink-0" style={{ width: '30px' }}>
           {/* Placeholder for month label row height */}
           <div className="h-8 mb-1"></div> 
-          {/* Actual Weekday labels aligned with grid */}
-          {['Mon', '', 'Wed', '', 'Fri', '', ''].map((dayLabel, index) => (
+          {/* Actual Weekday labels aligned with grid (Sunday = row 0) */}
+          {['', 'Mon', '', 'Wed', '', 'Fri', ''].map((dayLabel, index) => (
             <div 
               key={`weekday-${index}`}
               className="h-3 m-0.5 flex items-center" // Match cell height + margin
