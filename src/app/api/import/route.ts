@@ -3,6 +3,7 @@ import { db } from '@/db'; // Import the db client
 import { tasks as tasksSchema } from '@/db/schema'; // Import the tasks schema
 import { eq, sql } from 'drizzle-orm'; // Import sql helper
 import * as z from 'zod'; // Import zod
+import { hashString } from '@/utils/hashUtils'; // Import the hash utility
 
 // Helper function to get the expected API key from environment variables
 function getApiKey(): string | undefined {
@@ -14,15 +15,11 @@ const TaskSchema = z.object({
     primaryKey: z.string(),
     name: z.string(),
     status: z.string().optional(),
-    taskStatus: z.string().optional(), 
-    active: z.boolean().optional(),
+    
     added: z.string().datetime().optional(), 
     modified: z.string().datetime().optional(),
     completed: z.string().datetime().optional(),
     completionDate: z.string().datetime().optional(), 
-    dueDate: z.string().datetime().optional(),
-    note: z.string().optional(),
-    tags: z.array(z.string()).optional(),
 });
 
 // Infer the TypeScript type from the Zod schema
@@ -79,21 +76,27 @@ export async function POST(req: NextRequest) {
         }
 
         // Prepare data for batch insertion/update
-        const tasksToUpsert = tasks.map((task: Task) => ({
-            primaryKey: task.primaryKey,
-            name: task.name,
-            status: task.status,
-            taskStatus: task.taskStatus,
-            active: task.active,
-            added: task.added ? new Date(task.added) : null,
-            modified: task.modified ? new Date(task.modified) : null,
-            completed: task.completed ? new Date(task.completed) : (task.completionDate ? new Date(task.completionDate) : null),
-            completionDate: task.completionDate ? new Date(task.completionDate) : null,
-            dueDate: task.dueDate ? new Date(task.dueDate) : null,
-            note: task.note,
-            tags: task.tags,
-            rawData: task, 
-        }));
+        const tasksToUpsert = tasks.map((task: Task) => {
+            const hashedName = hashString(task.name);
+            return {
+                primaryKey: task.primaryKey,
+                // Use the hashed name, or the original if hashing failed/invalid input
+                name: hashedName !== null ? hashedName : task.name,
+                status: task.status,
+               
+                active: task.active,
+                added: task.added ? new Date(task.added) : null,
+                modified: task.modified ? new Date(task.modified) : null,
+                completed: task.completed ? new Date(task.completed) : (task.completionDate ? new Date(task.completionDate) : null),
+                completionDate: task.completionDate ? new Date(task.completionDate) : null,
+               
+                taskStatus: task.taskStatus,
+                dueDate: task.dueDate ? new Date(task.dueDate) : null,
+                note: task.note,
+                tags: task.tags,
+                rawData: task, 
+            };
+        });
 
         console.log(`Preparing to upsert ${tasksToUpsert.length} tasks...`);
 
