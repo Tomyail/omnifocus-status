@@ -15,7 +15,12 @@ const TaskSchema = z.object({
     primaryKey: z.string(),
     name: z.string(),
     status: z.string().optional(),
-    
+    // active: z.boolean().optional(),
+    // taskStatus: z.string().optional(),
+    // dueDate: z.string().datetime().optional(),
+    // note: z.string().optional(),
+    // tags: z.array(z.string()).optional(),
+    // rawData: z.any().optional(), // Store the raw task data as-is
     added: z.string().datetime().optional(), 
     modified: z.string().datetime().optional(),
     completed: z.string().datetime().optional(),
@@ -83,18 +88,18 @@ export async function POST(req: NextRequest) {
                 // Use the hashed name, or the original if hashing failed/invalid input
                 name: hashedName !== null ? hashedName : task.name,
                 status: task.status,
-               
-                active: task.active,
                 added: task.added ? new Date(task.added) : null,
                 modified: task.modified ? new Date(task.modified) : null,
                 completed: task.completed ? new Date(task.completed) : (task.completionDate ? new Date(task.completionDate) : null),
                 completionDate: task.completionDate ? new Date(task.completionDate) : null,
-               
-                taskStatus: task.taskStatus,
-                dueDate: task.dueDate ? new Date(task.dueDate) : null,
-                note: task.note,
-                tags: task.tags,
-                rawData: task, 
+                // Provide defaults for fields potentially missing from input due to Zod schema changes
+                // Adjust defaults based on actual DB schema constraints (nullable/non-nullable)
+                active: (task as any).active ?? null, 
+                taskStatus: (task as any).taskStatus ?? null,
+                dueDate: (task as any).dueDate ? new Date((task as any).dueDate) : null,
+                note: (task as any).note ?? null,
+                tags: (task as any).tags ?? null, // Assuming db column allows null
+                rawData: (task as any).rawData ?? {}, // Assuming rawData is required (non-nullable) in DB
             };
         });
 
@@ -107,16 +112,17 @@ export async function POST(req: NextRequest) {
                 set: { 
                     name: sql`excluded.name`,
                     status: sql`excluded.status`,
-                    taskStatus: sql`excluded.task_status`,
-                    active: sql`excluded.active`,
                     added: sql`excluded.added`,
                     modified: sql`excluded.modified`,
                     completed: sql`excluded.completed`,
                     completionDate: sql`excluded.completion_date`,
-                    dueDate: sql`excluded.due_date`,
-                    note: sql`excluded.note`,
-                    tags: sql`excluded.tags`,
-                    rawData: sql`excluded.raw_data`,
+                    // Excluded fields are set to null on insert, don't update them on conflict
+                    // active: sql`excluded.active`, 
+                    // taskStatus: sql`excluded.task_status`,
+                    // dueDate: sql`excluded.due_date`,
+                    // note: sql`excluded.note`,
+                    // tags: sql`excluded.tags`,
+                    // rawData: sql`excluded.raw_data`, // rawData is set to null/{} on insert, don't update it
                     importedAt: new Date(), 
                 },
             })

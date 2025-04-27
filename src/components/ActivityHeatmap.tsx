@@ -40,15 +40,12 @@ export default function ActivityHeatmap({ tasks = [] }: ActivityHeatmapProps) {
       
       // Check status values
       const statusValues = new Set();
-      const taskStatusValues = new Set();
       
       validTasks.forEach(task => {
         if (task.status !== undefined) statusValues.add(task.status);
-        if (task.taskStatus !== undefined) taskStatusValues.add(task.taskStatus);
       });
       
       console.log('Status values found:', Array.from(statusValues));
-      console.log('TaskStatus values found:', Array.from(taskStatusValues));
       
       // Count completed tasks (case insensitive)
       const completedTasks = validTasks.filter(

@@ -6,13 +6,16 @@ import { format } from 'date-fns';
 
 export const dynamic = 'force-dynamic'; // Force dynamic rendering
 
-// Define the structure of the data returned from the database
-// We'll use the rawData field which stores the original task JSON
+// Define the type for tasks fetched directly from the database
 interface DbTask {
   id: number;
   primaryKey: string;
-  // ... other fields from schema ...
-  rawData: unknown; // Drizzle selects JSONB as unknown by default
+  name: string;
+  status: string | null; // Status can be null in the DB
+  added: Date | null;
+  modified: Date | null;
+  completed: Date | null;
+  completionDate: Date | null;
   importedAt: Date;
 }
 
@@ -35,10 +38,21 @@ async function getLatestTasksData(): Promise<Task[]> {
       return [];
     }
 
-    // Extract the rawData which should match the Task interface
-    // Assuming the `rawData` field in the DB stores the original task structure
-    // Use type assertion to tell TS the expected structure
-    const tasks: Task[] = latestTasksFromDb.map(dbTask => dbTask.rawData as Task);
+    // Construct Task objects directly from the selected DB fields
+    const tasks: Task[] = latestTasksFromDb.map((dbTask): Task => ({
+      // Map fields from DbTask (schema) to Task interface
+      id: dbTask.id,
+      primaryKey: dbTask.primaryKey,
+      name: dbTask.name,
+      status: dbTask.status ?? undefined, // Handle potential null from DB
+      // Convert Date objects to ISO strings for the Task interface
+      added: dbTask.added?.toISOString() ?? undefined,
+      modified: dbTask.modified?.toISOString() ?? undefined, 
+      completed: dbTask.completed?.toISOString() ?? undefined,
+      completionDate: dbTask.completionDate?.toISOString() ?? null,
+      importedAt: dbTask.importedAt,
+      // Ensure all required fields for Task interface are mapped
+    }));
 
     console.log(`Fetched ${tasks.length} tasks from the database.`);
     // Add detailed logging for the first few tasks fetched from DB
@@ -55,28 +69,29 @@ export default async function Home() {
   const taskData = await getLatestTasksData();
   
   // Log task data for debugging
-  console.log('Task data loaded:', {
-    count: taskData.length,
-    tasksLength: taskData.length,
-  });
+  console.log('Fetched', taskData.length, 'tasks from the database.');
+  console.log('Raw taskData sample (first 5):', JSON.stringify(taskData.slice(0, 5), null, 2)); // Log raw data sample
+  console.log(`Task data loaded: { count: ${taskData.length}, tasksLength: ${taskData.length} }`);
   
-  // More detailed debugging of task data
-  if (taskData.length > 0) {
-    console.log('First task in data:', taskData[0]);
-    
-    // Check status values
-    const statusValues = new Set<string>(); // Be explicit with Set type
-    taskData.forEach((task: Task) => { // Use Task type here
-      if (task.status) statusValues.add(task.status);
-    });
-    console.log('Status values in loaded data:', Array.from(statusValues));
-    
-    // Count completed tasks (case insensitive)
-    const completedCount = taskData.filter(
-      (task: Task) => task.status && task.status.toLowerCase() === 'completed'
-    ).length;
-    console.log('Completed tasks count:', completedCount);
-  }
+  // Filter out any undefined/null entries before processing
+  const validTaskData = taskData.filter(task => task);
+  console.log('Filtered taskData length:', validTaskData.length);
+  
+  // Debugging: Log the first task if available
+  console.log('First task in valid data:', validTaskData[0]);
+  
+  // Get unique status values for debugging
+  const statusValues = new Set<string>(); // Be explicit with Set type
+  validTaskData.forEach((task: Task) => { // Use Task type here
+    if (task.status) statusValues.add(task.status);
+  });
+  console.log('Status values in loaded data:', Array.from(statusValues));
+  
+  // Count completed tasks (case insensitive)
+  const completedCount = validTaskData.filter(
+    (task: Task) => task.status && task.status.toLowerCase() === 'completed'
+  ).length;
+  console.log('Completed tasks count:', completedCount);
   
   // Handle potentially invalid date by providing a fallback
   let lastUpdated: Date;
@@ -103,7 +118,7 @@ export default async function Home() {
       <main className="max-w-5xl mx-auto">
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
           <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Task Completion Activity</h2>
-          <ActivityHeatmap tasks={taskData} />
+          <ActivityHeatmap tasks={validTaskData} />
           
           <div className="mt-8">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">Stats</h3>
@@ -111,14 +126,14 @@ export default async function Home() {
               <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
                 <p className="text-sm text-gray-500 dark:text-gray-400">Total Tasks</p>
                 <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                  {taskData.length}
+                  {validTaskData.length}
                 </p>
               </div>
               <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
                 <p className="text-sm text-gray-500 dark:text-gray-400">Completed Tasks</p>
                 <p className="text-2xl font-bold text-gray-900 dark:text-white">
                   {
-                    taskData.filter((task: Task) => // Use Task type, check status exists
+                    validTaskData.filter((task: Task) => // Use Task type, check status exists
                       task.status && task.status.toLowerCase() === 'completed').length
                   }
                 </p>
@@ -126,9 +141,9 @@ export default async function Home() {
               <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
                 <p className="text-sm text-gray-500 dark:text-gray-400">Completion Rate</p>
                 <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                  {taskData.length > 0 ? 
-                    Math.round((taskData.filter((task: Task) => // Use Task type, check status exists
-                      task.status && task.status.toLowerCase() === 'completed').length / taskData.length) * 100) : 0}%
+                  {validTaskData.length > 0 ? 
+                    Math.round((validTaskData.filter((task: Task) => // Use Task type, check status exists
+                      task.status && task.status.toLowerCase() === 'completed').length / validTaskData.length) * 100) : 0}%
                 </p>
               </div>
             </div>
