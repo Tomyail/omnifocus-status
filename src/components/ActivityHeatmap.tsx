@@ -168,28 +168,13 @@ export default function ActivityHeatmap({ tasks = [] }: ActivityHeatmapProps) {
 
   return (
     <div className="w-full max-w-5xl mx-auto my-8">
-      {/* Month Labels */}
-      <div className="relative h-8 ml-10 mb-1"> {/* Adjusted ml-10 */} 
-        <div className="relative w-full">
-          {monthLabels.map((monthLabel, index) => (
-            <div 
-              key={`month-${index}`}
-              className="absolute top-0 text-xs text-gray-500 dark:text-gray-400"
-              style={{ 
-                left: `${monthLabel.left}px` // Use calculated left position
-              }}
-            >
-              {monthLabel.month}
-            </div>
-          ))}
-        </div>
-      </div>
-      
-      {/* Heatmap Grid */}
+      {/* Main layout: Fixed weekdays on left, scrollable content on right */}
       <div className="flex">
-        {/* Weekday Labels - Aligned with grid rows */}
+        {/* Weekday Labels - Fixed */}
         <div className="flex flex-col mr-2 text-xs text-gray-500 dark:text-gray-400 shrink-0" style={{ width: '30px' }}>
-          {/* Mirror the 7 day cells vertically */} 
+          {/* Placeholder for month label row height */}
+          <div className="h-8 mb-1"></div> 
+          {/* Actual Weekday labels aligned with grid */}
           {['Mon', '', 'Wed', '', 'Fri', '', ''].map((dayLabel, index) => (
             <div 
               key={`weekday-${index}`}
@@ -200,29 +185,49 @@ export default function ActivityHeatmap({ tasks = [] }: ActivityHeatmapProps) {
           ))}
         </div>
 
-        {/* Grid Columns (Weeks) - Remove overflow to prevent scrollbar */}
-        <div className="flex"> 
-          {weeks.map((week, weekIndex) => (
-            <div key={`week-${weekIndex}`} className="flex flex-col">
-              {week.map((day, dayIndex) => (
+        {/* Scrollable container for Months and Grid */}
+        <div className="flex-grow overflow-x-auto">
+          {/* Month Labels - Now inside scrollable area */}
+          <div className="relative h-8 mb-1" style={{ minWidth: `${weeks.length * 14}px` }}> {/* Use minWidth based on weeks */} 
+            <div className="relative w-full">
+              {monthLabels.map((monthLabel, index) => (
                 <div 
-                  key={`day-${weekIndex}-${dayIndex}`}
-                  className={`w-3 h-3 m-0.5 rounded-sm relative group border border-gray-200 dark:border-gray-600 ${day ? getLevelColor(day.level) : 'bg-gray-100 dark:bg-gray-700 opacity-50'}`}
-                  title={day ? `${format(day.date, 'yyyy-MM-dd')}: ${day.count} tasks` : ''}
+                  key={`month-${index}`}
+                  className="absolute top-0 text-xs text-gray-500 dark:text-gray-400"
+                  style={{ 
+                    left: `${monthLabel.left}px` // Use calculated left position
+                  }}
                 >
-                  {day && day.count > 0 && (
-                    <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-1 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap z-10 pointer-events-none">
-                      {format(day.date, 'yyyy-MM-dd')}: {day.count} tasks
-                    </div>
-                  )}
+                  {monthLabel.month}
                 </div>
               ))}
             </div>
-          ))}
+          </div>
+
+          {/* Grid Columns (Weeks) - Now inside scrollable area */}
+          <div className="flex"> {/* Removed overflow-x-auto from here */}
+            {weeks.map((week, weekIndex) => (
+              <div key={`week-${weekIndex}`} className="flex flex-col">
+                {week.map((day, dayIndex) => (
+                  <div 
+                    key={`day-${weekIndex}-${dayIndex}`}
+                    className={`w-3 h-3 m-0.5 rounded-sm relative group border border-gray-200 dark:border-gray-600 ${day ? getLevelColor(day.level) : 'bg-gray-100 dark:bg-gray-700 opacity-50'}`}
+                    title={day ? `${format(day.date, 'yyyy-MM-dd')}: ${day.count} tasks` : ''}
+                  >
+                    {day && day.count > 0 && (
+                      <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-1 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap z-10 pointer-events-none">
+                        {format(day.date, 'yyyy-MM-dd')}: {day.count} tasks
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
         </div>
       </div>
-      
-      {/* Legend */}
+
+      {/* Legend (remains outside the scrolling area) */}
       <div className="flex items-center justify-end mt-2 text-xs text-gray-500 dark:text-gray-400">
         <div>Less</div>
         <div className="flex mx-2">
