@@ -1,0 +1,102 @@
+/*{
+  "type": "action",
+  "label": "Configure Export Settings",
+  "image": "gearshape",
+  "identifier": "com.tomyail.omnifocus-status.config"
+}*/
+(() => {
+    const preferences = new Preferences("com.tomyail.omnifocus-status.export"); // Uses the identifier from the metadata block
+
+    // Preference keys (MUST match the export script)
+    const PREF_KEYS = {
+        DAYS_AGO: 'exportDaysAgo',
+        API_TOKEN: 'apiToken',
+        API_ENDPOINT: 'apiEndpoint'
+    };
+    const DEFAULT_DAYS_AGO = 7;
+
+    const action = new PlugIn.Action(async function (selection, sender) {
+        // Read current preferences
+        let currentApiToken = preferences.readString(PREF_KEYS.API_TOKEN);
+        let currentApiEndpoint = preferences.readString(PREF_KEYS.API_ENDPOINT);
+        let currentExportDaysAgo = preferences.readNumber(PREF_KEYS.DAYS_AGO); // null if not set/invalid
+
+        const form = new Form();
+
+        // Add fields for all settings, pre-filled with current values
+        form.addField(new Form.Field.String(
+            PREF_KEYS.API_ENDPOINT, 
+            "API Endpoint URL", 
+            currentApiEndpoint || ""
+        ));
+        form.addField(new Form.Field.String( // Use String for token input, consider SecureString if available/needed
+            PREF_KEYS.API_TOKEN, 
+            "API Token", 
+            currentApiToken || ""
+        ));
+        form.addField(new Form.Field.String(
+            PREF_KEYS.DAYS_AGO, 
+            "Export Tasks from Last (Days)", 
+            (currentExportDaysAgo) ? String(currentExportDaysAgo) : String(DEFAULT_DAYS_AGO)
+        ));
+
+        const formPrompt = "Enter or update export settings:";
+        const formPromise = form.show(formPrompt, "Save Settings");
+
+        formPromise.then(formResult => {
+            if (formResult.values) { // User did not cancel
+                let values = formResult.values;
+                let saved = true;
+                let validationError = null;
+
+                // Validate and save Endpoint
+                const endpointInput = values[PREF_KEYS.API_ENDPOINT]?.trim();
+                if (endpointInput) {
+                    preferences.write(PREF_KEYS.API_ENDPOINT, endpointInput);
+                } else {
+                    validationError = "API Endpoint cannot be empty.";
+                    saved = false;
+                }
+
+                // Validate and save Token
+                if (saved) {
+                    const tokenInput = values[PREF_KEYS.API_TOKEN]?.trim();
+                    if (tokenInput) {
+                        preferences.write(PREF_KEYS.API_TOKEN, tokenInput);
+                    } else {
+                        validationError = "API Token cannot be empty.";
+                        saved = false;
+                    }
+                }
+
+                // Validate and save Days Ago
+                if (saved) {
+                    const daysStr = values[PREF_KEYS.DAYS_AGO]?.trim();
+                    const daysNum = parseInt(daysStr, 10);
+                    if (!isNaN(daysNum) && daysNum > 0) {
+                        preferences.write(PREF_KEYS.DAYS_AGO, daysNum);
+                    } else {
+                        validationError = "Export Days Ago must be a positive number.";
+                        saved = false;
+                    }
+                }
+
+                // Show result alert
+                if (saved) {
+                    new Alert("Settings Saved", "Export configuration has been updated.").show();
+                } else {
+                    new Alert("Save Failed", validationError || "Could not save settings.").show();
+                }
+            } else {
+                 new Alert("Settings Unchanged", "Configuration was not modified.").show();
+            }
+        });
+        
+        formPromise.catch(err => {
+            console.error("Form Error:", err);
+            new Alert("Error", "An error occurred while showing the form.").show();
+        });
+    });
+
+    return action;
+})();

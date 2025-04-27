@@ -4,8 +4,8 @@
 
 This project syncs completed OmniFocus task data to a web service, allowing you to visualize and track your task activity history over time. It consists of two main parts:
 
-1.  **OmniFocus Script (`.omnijs`):** An Automation script that runs within OmniFocus to collect recently completed tasks and send them to a specified API endpoint.
-2.  **Web Service (Next.js App):** A web application built with Next.js that receives the task data via an API endpoint, stores it (e.g., in a database), and displays it on a dashboard.
+1.  **OmniFocus Scripts (`.omnijs`):** Automation scripts that run within OmniFocus. One script configures API settings, and the other collects recently completed tasks and sends them to the web service.
+2.  **Web Service (Next.js App):** A web application built with Next.js that receives the task data via an API endpoint, stores it, and displays it on a dashboard.
 
 ![Screenshot](image.png)
 
@@ -30,17 +30,18 @@ This is a [Next.js](https://nextjs.org) project.
     npm install
     # or yarn install / pnpm install / bun install
     ```
-3.  Create a `.env.local` file in the project root and add your database connection string:
+3.  Create a `.env.local` file in the project root and add your database connection string and API secret:
     ```env
     # Connection string for your PostgreSQL database
     DATABASE_URL="postgres://user:password@host:port/database?sslmode=require"
 
-    # Optional: Define a secret token for API authorization
-    API_SECRET_TOKEN="your_secure_random_token"
+    # Define a secret token for API authorization (must match OmniFocus config)
+    IMPORT_API_SECRET_KEY="your_secure_random_token"
     ```
-4.  Run database migrations (if using Prisma or similar):
+4.  Run database migrations (adjust command if not using drizzle):
     ```bash
-    npx prisma migrate dev # Or the relevant command for your setup
+    npx drizzle-kit generate # or your migration generation command
+    npx drizzle-kit push # or your migration push command
     ```
 5.  Start the development server:
     ```bash
@@ -48,37 +49,57 @@ This is a [Next.js](https://nextjs.org) project.
     ```
     Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-### 2. Configure & Install OmniFocus Script
+### 2. Setup OmniFocus Scripts
 
-1.  **Get the Script:** Find the `support/task-activity-stats.omnijs` file in the project.
-2.  **Configure the Script:** Open the `.omnijs` file and modify the configuration variables at the top:
-    ```javascript
-    // Configuration: API Endpoint URL (Point this to your Web Service API)
-    const API_ENDPOINT = 'http://localhost:3000/api/import'; // Or your deployed URL
-    // Configuration: Export tasks added within how many days
-    const EXPORT_DAYS_AGO = 7; // Adjust as needed
-    // Configuration: API Authentication Token (Must match API_SECRET_TOKEN in .env.local)
-    const API_TOKEN = 'your_secure_random_token'; // Use the same token as in .env.local
-    ```
-3.  **Install the Script:**
+This project uses two OmniFocus scripts located in the `support/` directory:
+
+*   `configure-export.omnijs`: Allows you to set up the necessary API endpoint, token, and export duration via a form within OmniFocus.
+*   `task-activity-stats.omnijs`: Reads the configuration saved by the configure script and exports task data to your web service.
+
+**Setup Steps:**
+
+1.  **Set Script Destination:**
+    *   You need to tell the project where your OmniFocus Plug-Ins folder is located so the scripts can be copied.
+    *   The recommended way is using [`direnv`](https://direnv.net/). Install `direnv` if you haven't already (`brew install direnv` on macOS) and hook it into your shell (follow `direnv` instructions).
+    *   Create a file named `.envrc` in the project root (`/Users/lixuexin03/source/personal/omnifocus-status/`) with the following content, replacing the path with your actual OmniFocus Plug-Ins folder path:
+        ```bash
+        # Find your Plug-Ins folder via OmniFocus Menu: Automation -> Configure... -> Reveal Plug-Ins Folder
+        export OMNIFOCUS_SCRIPTS_DIR="/path/to/your/OmniFocus/Plug-Ins"
+        ```
+    *   Run `direnv allow` in your terminal within the project directory. Now, `direnv` will automatically set the `OMNIFOCUS_SCRIPTS_DIR` environment variable whenever you `cd` into this project.
+
+2.  **Sync Scripts to OmniFocus:**
+    *   Run the sync command in your terminal:
+        ```bash
+        npm run sync
+        # or yarn sync
+        ```
+    *   This command copies both `.omnijs` files from the `support/` directory to the `OMNIFOCUS_SCRIPTS_DIR` you defined in `.envrc`. OmniFocus should automatically detect the new plugins.
+
+3.  **Configure Settings in OmniFocus:**
     *   Open OmniFocus.
-    *   Select "Automation" -> "Configure..." from the menu bar.
-    *   Click the "+" button and choose "Add Plug-In from File..." or drag the configured `.omnijs` file into the Plug-Ins window.
-    *   Alternatively, save the configured script directly into your OmniFocus Plug-Ins folder. You can find this folder via Automation -> Configure... -> Reveal Plug-Ins Folder.
-4.  **Run the Script:**
-    *   You can run the script manually from the Automation menu in OmniFocus.
+    *   Run the "Configure Export Settings" action from the Automation menu (it might be under a submenu named after the plugin identifier or folder).
+    *   A form will appear. Enter:
+        *   **API Endpoint URL:** The full URL to your web service's import endpoint (e.g., `http://localhost:3000/api/import` or your deployed Vercel URL `/api/import`).
+        *   **API Token:** The secret token that matches the `IMPORT_API_SECRET_KEY` in your `.env.local` file.
+        *   **Export Tasks from Last (Days):** The number of days of task history to export (e.g., 7).
+    *   Click "Save Settings". The configuration is now stored securely within OmniFocus preferences, linked to the plugin identifier (`com.tomyail.omnifocus-status.export`).
+
+4.  **Run the Export Script:**
+    *   Run the "Export" action from the Automation menu in OmniFocus whenever you want to send updated task data.
     *   Consider setting up a keyboard shortcut or adding it to your OmniFocus toolbar for quick access.
 
 ### 3. Deploy to Vercel (Optional)
 
 *   Push your code to a Git repository (GitHub, GitLab, Bitbucket).
 *   Import the project into Vercel.
-*   During import or in the Vercel project settings, configure the **same** `DATABASE_URL` and `API_SECRET_TOKEN` environment variables you used locally.
+*   During import or in the Vercel project settings, configure the **same** `DATABASE_URL` and `IMPORT_API_SECRET_KEY` environment variables you used locally.
 *   Let Vercel build and deploy the application. Note your deployment URL (e.g., `https://your-app-name.vercel.app`).
+*   Make sure to update the **API Endpoint URL** in the OmniFocus "Configure Export Settings" action to point to your Vercel deployment's API endpoint (e.g., `https://your-app-name.vercel.app/api/import`).
 
 ### 4. View Status
 
-Once the script runs successfully and sends data to your web service, visit the web application URL (e.g., `http://localhost:3000`) to see your task activity dashboard.
+Once the "Export" script runs successfully and sends data to your web service, visit the web application URL (e.g., `http://localhost:3000` or your Vercel URL) to see your task activity dashboard.
 
 ---
 

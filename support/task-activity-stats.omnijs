@@ -1,17 +1,52 @@
 /*{
   "type": "action",
   "label": "Export",
-  "image": "text.bubble"
+  "image": "figure.run",
+  "identifier": "com.tomyail.omnifocus-status.export"
 }*/
 (() => {
-    // Configuration: API Endpoint URL
-    // const API_ENDPOINT = 'https://YOUR_DOMAIN/api/import';
-    // Configuration: Export tasks added within how many days
-    const EXPORT_DAYS_AGO = 7;
-    // Configuration: API Authentication Token (replace with your own)
-    const API_TOKEN = 'YOUR_API_TOKEN_HERE'; 
+
+  preferences = new Preferences() // NO ID = PLUG-IN ID
+	console.log(preferences.identifier)
+
+    // Preference keys
+    const PREF_KEYS = {
+        DAYS_AGO: 'exportDaysAgo',
+        API_TOKEN: 'apiToken',
+        API_ENDPOINT: 'apiEndpoint'
+    };
+    // Default value for days ago
+    const DEFAULT_DAYS_AGO = 7;
 
     const action = new PlugIn.Action(async function (selection, sender) {
+
+      // Read initial configuration from preferences
+      const apiToken = preferences.readString(PREF_KEYS.API_TOKEN);
+      const apiEndpoint = preferences.readString(PREF_KEYS.API_ENDPOINT);
+      const exportDaysAgo = preferences.readNumber(PREF_KEYS.DAYS_AGO);
+
+      // Validate preferences
+      if (!apiToken || !apiEndpoint || exportDaysAgo === null) {
+          let missing = [];
+          if (!apiEndpoint) missing.push('API Endpoint');
+          if (!apiToken) missing.push('API Token');
+          if (exportDaysAgo === null) missing.push('Export Days Ago');
+          
+          new Alert(
+              "Configuration Missing", 
+              `The following setting(s) are missing or invalid: ${missing.join(', ')}. Please run the 'Configure Export Settings' action first.`
+          ).show();
+          return; // Stop the action
+      }
+
+      // Proceed with the rest of the action using the validated preferences
+      console.log('Using API Token:', apiToken ? '********' : 'Not Set'); // Avoid logging token directly
+      console.log('Using API Endpoint:', apiEndpoint);
+      console.log('Using Export Days Ago:', exportDaysAgo);
+
+      // Configuration: API Endpoint URL
+      // EXPORT_DAYS_AGO and API_TOKEN are now read from preferences
+
       const rootFolders = flattenedFolders.filter(
         (folder) => folder.parent === null
       );
@@ -112,7 +147,7 @@
         request.method = 'POST';
         request.headers = {
           'content-type': 'application/json',
-          'Authorization': `Bearer ${API_TOKEN}`,
+          'Authorization': `Bearer ${apiToken}`,
         };
 
 
@@ -143,7 +178,7 @@
       const exportInbox = inbox.map(createTask);
 
       const startDate = new Date();
-      startDate.setDate(startDate.getDate() - EXPORT_DAYS_AGO);
+      startDate.setDate(startDate.getDate() - exportDaysAgo);
       
       const tasks = flattenedTasks
         .filter(task => task.added >= startDate)
@@ -152,7 +187,7 @@
         .sort((a, b) => b.modified - a.modified);
   
 
-      await sendPost(API_ENDPOINT, {
+      await sendPost(apiEndpoint, { // Use the API_ENDPOINT from preferences
         tasks
       });
 

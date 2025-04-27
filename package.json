@@ -6,7 +6,8 @@
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "sync": "cp support/*.omnijs $OMNIFOCUS_SCRIPTS_DIR/"
   },
   "dependencies": {
     "@vercel/postgres": "^0.10.0",
