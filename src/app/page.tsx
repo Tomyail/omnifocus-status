@@ -3,8 +3,10 @@ import { db } from '@/db'; // Import the db client
 import { tasks as tasksSchema } from '@/db/schema'; // Import the tasks schema
 import { desc } from 'drizzle-orm'; // Import desc for ordering
 import { format } from 'date-fns';
+import AuthHeader from '@/components/auth-header';
 
-export const dynamic = 'force-dynamic'; // Force dynamic rendering
+// Force dynamic rendering
+export const revalidate = 0;
 
 // Define the type for tasks fetched directly from the database
 interface DbTask {
@@ -108,12 +110,7 @@ export default async function Home() {
   
   return (
     <div className="min-h-screen p-6 bg-white dark:bg-gray-900">
-      <header className="max-w-5xl mx-auto mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">OmniFocus Activity</h1>
-        <p className="text-gray-600 dark:text-gray-400">
-          Visualizing your completed tasks over time. Last updated: {format(lastUpdated, 'PPP')}
-        </p>
-      </header>
+      <AuthHeader lastUpdated={lastUpdated} />
       
       <main className="max-w-5xl mx-auto">
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
